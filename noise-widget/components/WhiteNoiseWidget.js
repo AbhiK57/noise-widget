@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Timer, CloudRain, Waves, Sun } from 'lucide-react';
 
-// Using a generic tree icon for Forest as a robust alternative.
 const Forest = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22v-8"/>
@@ -24,7 +23,6 @@ const SoundControl = React.memo(({ sound, onVolumeChange, initialVolume }) => {
         if (audio) {
             audio.volume = volume;
             if (volume > 0 && audio.paused) {
-                // Play might be interrupted by browser policies, so we catch errors.
                 audio.play().catch(error => console.error(`Error playing ${sound.name}:`, error));
             } else if (volume === 0 && !audio.paused) {
                 audio.pause();
@@ -63,10 +61,10 @@ SoundControl.displayName = 'SoundControl';
 // --- Main Widget Component ---
 const WhiteNoiseWidget = () => {
     const SOUNDS = [
-        { id: 'rain', name: 'Rain', src: 'https://cdn.pixabay.com/audio/2022/10/20/audio_29324a42e5.mp3', icon: <CloudRain size={28} /> },
+        { id: 'rain', name: 'Rain', src: '/sounds/rain.mp3', icon: <CloudRain size={28} /> },
         { id: 'forest', name: 'Forest', src: 'https://cdn.pixabay.com/audio/2022/09/20/audio_b72410a539.mp3', icon: <Forest /> },
-        { id: 'ocean', name: 'Ocean', src: 'https://cdn.pixabay.com/audio/2023/09/23/audio_8277341e17.mp3', icon: <Waves size={28} /> },
-        { id: 'summer', name: 'Summer Night', src: 'https://cdn.pixabay.com/audio/2022/08/17/audio_34b0f340e3.mp3', icon: <Sun size={28} /> },
+        { id: 'ocean', name: 'Ocean', src: '/sounds/ocean.mp3', icon: <Waves size={28} /> },
+        { id: 'summer', name: 'Summer Night', src: '/sounds/sun.mp3', icon: <Sun size={28} /> },
     ];
     
     const [volumes, setVolumes] = useState(() => SOUNDS.reduce((acc, s) => ({ ...acc, [s.id]: 0 }), {}));
@@ -157,56 +155,51 @@ const WhiteNoiseWidget = () => {
     };
 
     return (
-        // Background container to center the widget
-        <div className="min-h-screen bg-gray-800 bg-cover bg-center flex items-center justify-center p-4" style={{backgroundImage: "url('https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2070&auto=format&fit=crop')"}}>
+        <div className="rounded-2xl p-4" data-tauri-drag-region>
+            <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold text-white tracking-wider">Noisy</h1>
+                <p className="text-sm text-slate-300">Mix your ambient sounds</p>
+            </div>
             
-            {/* The Widget */}
-            <div className="w-full max-w-md rounded-2xl bg-slate-800/50 p-6 shadow-2xl backdrop-blur-xl ring-1 ring-white/10">
-                <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-white tracking-wider">Noisy</h1>
-                    <p className="text-sm text-slate-300">Mix your ambient sounds</p>
+            <div className="space-y-5 mb-8">
+                {SOUNDS.map(sound => (
+                    <SoundControl
+                        key={sound.id}
+                        sound={sound}
+                        onVolumeChange={handleVolumeChange}
+                        initialVolume={volumes[sound.id]}
+                    />
+                ))}
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-4 mb-6">
+                <div className="flex items-center space-x-3">
+                    <Timer className="text-slate-300" />
+                    <span className="font-medium text-white w-24">
+                        {formatTime(timerRemaining)}
+                    </span>
                 </div>
-                
-                <div className="space-y-5 mb-8">
-                    {SOUNDS.map(sound => (
-                        <SoundControl
-                            key={sound.id}
-                            sound={sound}
-                            onVolumeChange={handleVolumeChange}
-                            initialVolume={volumes[sound.id]}
-                        />
+                <div className="flex items-center space-x-2 text-sm">
+                    {[15, 30, 60].map(min => (
+                         <button
+                            key={min}
+                            onClick={() => handleTimerButtonClick(min)}
+                            className={`px-3 py-1 rounded-md transition-colors ${timerDuration === min * 60 ? 'bg-teal-400 text-slate-900' : 'bg-slate-600/50 text-slate-200 hover:bg-slate-500/70'}`}
+                         >
+                             {min}m
+                         </button>
                     ))}
                 </div>
+            </div>
 
-                <div className="flex items-center justify-between rounded-lg bg-black/20 p-4 mb-6">
-                    <div className="flex items-center space-x-3">
-                        <Timer className="text-slate-300" />
-                        <span className="font-medium text-white w-24">
-                            {formatTime(timerRemaining)}
-                        </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                        {[15, 30, 60].map(min => (
-                             <button
-                                key={min}
-                                onClick={() => handleTimerButtonClick(min)}
-                                className={`px-3 py-1 rounded-md transition-colors ${timerDuration === min * 60 ? 'bg-teal-400 text-slate-900' : 'bg-slate-600/50 text-slate-200 hover:bg-slate-500/70'}`}
-                             >
-                                 {min}m
-                             </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="text-center">
-                    <button
-                        onClick={toggleMasterPlay}
-                        className="w-16 h-16 bg-teal-400 rounded-full flex items-center justify-center text-slate-900 shadow-lg hover:bg-teal-300 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
-                        aria-label={isAnythingPlaying ? 'Pause all sounds' : 'Play sounds'}
-                    >
-                        {isAnythingPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" />}
-                    </button>
-                </div>
+            <div className="text-center">
+                <button
+                    onClick={toggleMasterPlay}
+                    className="w-16 h-16 bg-teal-400 rounded-full flex items-center justify-center text-slate-900 shadow-lg hover:bg-teal-300 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
+                    aria-label={isAnythingPlaying ? 'Pause all sounds' : 'Play sounds'}
+                >
+                    {isAnythingPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" />}
+                </button>
             </div>
         </div>
     );
